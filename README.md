@@ -1,4 +1,4 @@
 pyntsc
 ======
 
-Python (GTK) Network Terminal Services Client
+PYNTSC (Pint See) - Python (GTK) Network Terminal Services Client
