@@ -102,6 +102,13 @@ class rdesktop(object):
         self.GeoX = connection['GeoX']
         self.GeoY = connection['GeoY']
 
+    def _get_socket(self):
+        return self.socket
+
+    def _get_proc(self):
+        return self.proc
+
+
     def run(self):
         subprocess.Popen([rdesktop_exe, "-X {0}".format(socket_id), connection['Host']])
 
