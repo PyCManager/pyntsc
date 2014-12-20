@@ -18,8 +18,16 @@ class pyntsc:
         self.text = self.make_text("This is a test\n")
         self.text2 = self.make_text("This is a second test\n")
 
-        self.socketH = gtk.Socket()
-        self.socketA = gtk.Socket()
+        connection = {}
+        connection['Haloween'] = {"Host": "192.168.5.36", "Port": 3389}
+        connection['Appsrv'] = {"Host": "192.168.5.8", "Port": 9001}
+
+        self.rd_Haloween = rDesktop(connection['Haloween'])
+        self.rd_Appsrv = rDesktop(connection['Appsrv'])
+
+        self.socketH = self.rd_Haloween._get_socket()
+        self.socketA = self.rd_Appsrv._get_socket()
+
         self.notebook = self.make_notebook()
 
         self.hpaned = self.hpane()
@@ -30,16 +38,17 @@ class pyntsc:
 
         print "Socket ID: {0}".format(self.socketH.get_id())
         print "Socket ID: {0}".format(self.socketA.get_id())
-        self.hproc = self.rdesktop(self.socketH.get_id(), "Haloween")
-        self.aproc = self.rdesktop(self.socketA.get_id(), "Appsrv")
+        self.hproc = self.rd_Haloween._get_proc()
+        self.aproc = self.rd_Appsrv._get_proc()
+
+        self.rd_Haloween.start()
+        self.rd_Appsrv.start()
 
         self.notebook.show()
         self.hpaned.show()
         self.window.show()
 
     def __del__(self):
-        self.hproc.terminate()
-        self.aproc.terminate()
         print "rdesktops terminated"
 
     def make_notebook(self):
@@ -69,7 +78,6 @@ class pyntsc:
 
     def delete_event(self, widget, event, data=None):
         print "delete event occurred"
-
         return False
 
     def destroy(self, widget, data=None):
@@ -79,38 +87,38 @@ class pyntsc:
     def main(self):
         gtk.main()
 
-    def rdesktop(self, socket_id, server):
-        connection = {}
-        connection['Haloween'] = {"Host": "192.168.5.36", "Port": 3389}
-        connection['Appsrv'] = {"Host": "192.168.5.8", "Port": 9001}
-        rdesktop_exe = "/usr/bin/rdesktop"
 
-        proc = subprocess.Popen([
-            rdesktop_exe,
-            "-X {0}".format(socket_id),
-            "{0}:{1}".format(connection[server]['Host'], connection[server]['Port'])
-        ])
-        return proc
-
-class rdesktop(object):
+class rDesktop(object):
     def __init__(self, connection):
+        self.rdesktop_exe = "/usr/bin/rdesktop"
         self.host = connection['Host']
         self.port = connection['Port']
-        self.username = connection['Username']
-        self.password = connection['Password']
-        self.domain = connection['Domain']
-        self.GeoX = connection['GeoX']
-        self.GeoY = connection['GeoY']
+        #self.username = connection['Username']
+        #self.password = connection['Password']
+        #self.domain = connection['Domain']
+        #self.GeoX = connection['GeoX']
+        #self.GeoY = connection['GeoY']
+        self.socket = False
+        self.process = False
 
     def _get_socket(self):
+        if not self.socket:
+            self.socket = gtk.Socket()
         return self.socket
 
     def _get_proc(self):
-        return self.proc
+        return self.process
 
+    def start(self):
+        socket = self._get_socket()
+        self.process = subprocess.Popen([
+            self.rdesktop_exe,
+            "-X {0}".format(socket.get_id()),
+            "{host}:{port}".format(host=self.host, port=self.port)
+        ])
 
-    def run(self):
-        subprocess.Popen([rdesktop_exe, "-X {0}".format(socket_id), connection['Host']])
+    def __del__(self):
+        self.process.terminate()
 
 if __name__ == "__main__":
     hello = pyntsc()
