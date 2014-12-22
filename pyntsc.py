@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-# example helloworld.py
-
 import pygtk
 pygtk.require('2.0')
 import gtk
@@ -15,9 +13,28 @@ class pyntsc:
         self.window.connect("destroy", self.destroy)
         self.window.set_border_width(10)
 
-        self.text = self.make_text("This is a test\n")
-        self.text2 = self.make_text("This is a second test\n")
+        #### ADD Tree View block
+        #self.text = self.make_text("This is a test\n")
+        self.tree_scroll = gtk.GtkScrolledWindow()
+        tree = gtk.GtkTree()
+        tree.connect("select_child", self.db_select_child, tree)
+        tree.connect("unselect_child", self.cb_unselect_child, tree)
+        tree.connect("selection_changed", self.cb_selection_changed)
+        self.tree_scroll.add_with_viewport(tree)
+        tree.show()
+        itemnames = ["Haloween", "Appsrv", "Datasrv", "Websrv", "Buttsrv"]
+        for i in itemnames:
+            item = gtk.GtkTreeItem(itemnames[i])
+            item.connect("select", self.cb_itemsignal, "select")
+            item.connect("deselect", self.cb_itemsignal, "deselect")
+            item.connect("toggle", self.cb_itemsignal, "toggle")
+            item.connect("expand", selb.cb_itemsignal, "expand")
+            item.connect("collapse", self.cb_itemsignal, "collapse")
 
+            tree.append(item)
+            item.show()
+
+        ### End Tree View Block
         connection = {}
         connection['Haloween'] = {"Host": "192.168.5.36", "Port": 3389}
         connection['Appsrv'] = {"Host": "192.168.5.8", "Port": 9001}
@@ -32,7 +49,8 @@ class pyntsc:
 
         self.hpaned = self.hpane()
 
-        self.text.show()
+        #self.text.show()
+        self.tree_scroll.show()
         self.socketA.show()
         self.socketH.show()
 
@@ -71,7 +89,8 @@ class pyntsc:
         hpaned = gtk.HPaned()
         self.window.add(hpaned)
 
-        hpaned.add1(self.text)
+        #hpaned.add1(self.text)
+        hpaned.add1(self.tree_scroll)
         hpaned.add2(self.notebook)
 
         return hpaned
@@ -115,10 +134,19 @@ class rDesktop(object):
             self.rdesktop_exe,
             "-X {0}".format(socket.get_id()),
             "{host}:{port}".format(host=self.host, port=self.port)
-        ])
+            ])
+        socket.child_focus(gtk.DIR_TAB_FORWARD)
 
     def __del__(self):
         self.process.terminate()
+
+
+class DataFile(object):
+    def __init__(self):
+        self.data_dir = "~/.pyntsc"
+        self.data_file = "connections.json"
+
+
 
 if __name__ == "__main__":
     hello = pyntsc()
