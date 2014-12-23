@@ -43,17 +43,13 @@ class pyntsc:
         self.tree.set_reorderable(False)
         self.tree.set_enable_search(True)
 
-        #self.tree_scroll.add_with_viewport(self.tree)
         self.tree_scroll.add(self.tree)
 
-
         ### End Tree View Block
-        connection = {}
-        connection['Haloween'] = {"Host": "192.168.5.46", "Port": 3389}
-        connection['Appsrv'] = {"Host": "192.168.5.8", "Port": 9001}
+        connection = self.fetch_tree_model()
 
-        self.rd_Haloween = rDesktop(connection['Haloween'])
-        self.rd_Appsrv = rDesktop(connection['Appsrv'])
+        self.rd_Haloween = rDesktop(connection['Home']['Snow'])
+        self.rd_Appsrv = rDesktop(connection['Home']['Appsrv'])
 
         self.socketH = self.rd_Haloween._get_socket()
         self.socketA = self.rd_Appsrv._get_socket()
