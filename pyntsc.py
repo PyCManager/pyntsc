@@ -15,28 +15,36 @@ class pyntsc:
 
         #### ADD Tree View block
         #self.text = self.make_text("This is a test\n")
-        self.tree_scroll = gtk.GtkScrolledWindow()
-        tree = gtk.GtkTree()
-        tree.connect("select_child", self.db_select_child, tree)
-        tree.connect("unselect_child", self.cb_unselect_child, tree)
-        tree.connect("selection_changed", self.cb_selection_changed)
-        self.tree_scroll.add_with_viewport(tree)
-        tree.show()
-        itemnames = ["Haloween", "Appsrv", "Datasrv", "Websrv", "Buttsrv"]
-        for i in itemnames:
-            item = gtk.GtkTreeItem(itemnames[i])
-            item.connect("select", self.cb_itemsignal, "select")
-            item.connect("deselect", self.cb_itemsignal, "deselect")
-            item.connect("toggle", self.cb_itemsignal, "toggle")
-            item.connect("expand", selb.cb_itemsignal, "expand")
-            item.connect("collapse", self.cb_itemsignal, "collapse")
+        machine_tree = self.fetch_tree_model()
+        self.treestore = gtk.TreeStore(str)
+        for item_cat, item_dict in machine_tree.iteritems():
+            print "adding group: {0}".format(item_cat)
+            piter = self.treestore.append(None, [item_cat])
+            for item_name, item_details in item_dict.iteritems():
+                print "adding item: {0}".format(item_name)
+                self.treestore.append(piter, [item_name])
 
-            tree.append(item)
-            item.show()
+        self.tree_scroll = gtk.ScrolledWindow()
+        self.tree = gtk.TreeView(self.treestore)
+        self.tvcolumn = gtk.TreeViewColumn('Connections')
+        self.tree.append_column(self.tvcolumn)
+        self.cell = gtk.CellRendererText()
+        self.tvcolumn.pack_start(self.cell, True)
+        self.tvcolumn.add_attribute(self.cell, 'text', 0)
+        self.tree.set_search_column(0)
+        self.tvcolumn.set_sort_column_id(0)
+        self.tvcolumn.set_sort_indicator(True)
+        self.tvcolumn.set_sort_order(gtk.SORT_ASCENDING)
+        self.tree.set_reorderable(False)
+        self.tree.set_enable_search(True)
+        self.tree_scroll.add_with_viewport(self.tree)
+        self.tree_scroll.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        #self.tree_scroll.add(self.tree)
+
 
         ### End Tree View Block
         connection = {}
-        connection['Haloween'] = {"Host": "192.168.5.36", "Port": 3389}
+        connection['Haloween'] = {"Host": "192.168.5.46", "Port": 3389}
         connection['Appsrv'] = {"Host": "192.168.5.8", "Port": 9001}
 
         self.rd_Haloween = rDesktop(connection['Haloween'])
@@ -49,22 +57,45 @@ class pyntsc:
 
         self.hpaned = self.hpane()
 
-        #self.text.show()
-        self.tree_scroll.show()
-        self.socketA.show()
-        self.socketH.show()
-
         print "Socket ID: {0}".format(self.socketH.get_id())
         print "Socket ID: {0}".format(self.socketA.get_id())
         self.hproc = self.rd_Haloween._get_proc()
         self.aproc = self.rd_Appsrv._get_proc()
 
+        self.window.show_all()
         self.rd_Haloween.start()
         self.rd_Appsrv.start()
 
-        self.notebook.show()
-        self.hpaned.show()
-        self.window.show()
+
+    def fetch_tree_model(self):
+        tree = {}
+        tree['Home'] = {}
+        tree['Home']['Haloween'] = {"Host": "192.168.5.46", "Port": 3389}
+        tree['Home']['Appsrv'] = {"Host": "192.168.5.8", "Port": 9001}
+        return tree
+
+    def tree_select(self):
+        print "tree element selected"
+
+    def tree_unselect(self):
+        print "tree element unselected"
+
+    def item_select(self):
+        print "item selected"
+
+    def item_deselect(self):
+        print "item unselected"
+
+    def item_toggle(self):
+        print "item toggled"
+
+    def item_expand(self):
+        print "item expanded"
+
+    def item_collapse(self):
+        print "item collapsed"
+
+
 
     def __del__(self):
         print "rdesktops terminated"
