@@ -2,7 +2,7 @@
 
 import pygtk
 pygtk.require('2.0')
-import gtk
+import gtk, os, json
 import subprocess
 
 class pyntsc:
@@ -25,21 +25,26 @@ class pyntsc:
                 self.treestore.append(piter, [item_name])
 
         self.tree_scroll = gtk.ScrolledWindow()
+        self.tree_scroll.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+
         self.tree = gtk.TreeView(self.treestore)
-        self.tvcolumn = gtk.TreeViewColumn('Connections')
-        self.tree.append_column(self.tvcolumn)
+
         self.cell = gtk.CellRendererText()
+
+        self.tvcolumn = gtk.TreeViewColumn('Connections')
         self.tvcolumn.pack_start(self.cell, True)
         self.tvcolumn.add_attribute(self.cell, 'text', 0)
-        self.tree.set_search_column(0)
+        self.tvcolumn.set_sort_order(gtk.SORT_ASCENDING)
         self.tvcolumn.set_sort_column_id(0)
         self.tvcolumn.set_sort_indicator(True)
-        self.tvcolumn.set_sort_order(gtk.SORT_ASCENDING)
+
+        self.tree.append_column(self.tvcolumn)
+        self.tree.set_search_column(0)
         self.tree.set_reorderable(False)
         self.tree.set_enable_search(True)
-        self.tree_scroll.add_with_viewport(self.tree)
-        self.tree_scroll.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
-        #self.tree_scroll.add(self.tree)
+
+        #self.tree_scroll.add_with_viewport(self.tree)
+        self.tree_scroll.add(self.tree)
 
 
         ### End Tree View Block
@@ -68,11 +73,13 @@ class pyntsc:
 
 
     def fetch_tree_model(self):
-        tree = {}
-        tree['Home'] = {}
-        tree['Home']['Haloween'] = {"Host": "192.168.5.46", "Port": 3389}
-        tree['Home']['Appsrv'] = {"Host": "192.168.5.8", "Port": 9001}
-        return tree
+        #tree = {}
+        #tree['Home'] = {}
+        #tree['Home']['Haloween'] = {"Host": "192.168.5.46", "Port": 3389}
+        #tree['Home']['Appsrv'] = {"Host": "192.168.5.8", "Port": 9001}
+        self.datafile = DataFile()
+        return self.datafile.get_connections()
+        #return tree
 
     def tree_select(self):
         print "tree element selected"
@@ -94,8 +101,6 @@ class pyntsc:
 
     def item_collapse(self):
         print "item collapsed"
-
-
 
     def __del__(self):
         print "rdesktops terminated"
@@ -123,6 +128,8 @@ class pyntsc:
         #hpaned.add1(self.text)
         hpaned.add1(self.tree_scroll)
         hpaned.add2(self.notebook)
+
+        hpaned.set_position(300)
 
         return hpaned
 
@@ -176,6 +183,28 @@ class DataFile(object):
     def __init__(self):
         self.data_dir = "~/.pyntsc"
         self.data_file = "connections.json"
+
+        self.make_dir()
+        if not os.path.isfile(os.path.expanduser("{0}/{1}".format(self.data_dir, self.data_file))):
+            self.connections = {}
+        else:
+            self.rfile = open(os.path.expanduser("{0}/{1}".format(self.data_dir, self.data_file)), 'r')
+            self.connections = json.loads(self.rfile.read())
+
+    def make_dir(self):
+        if not os.path.exists(os.path.expanduser(self.data_dir)):
+            os.mkdir(self.data_dir, 0700)
+
+    def write(self):
+        self.make_dir()
+        self.wfile = open(os.path,expanduser("{0}/{1}".format(self.data_dir, self.data_file)), 'w')
+        self.wfile.write(json.dumps(self.connections))
+
+    def update_connections(self, connections):
+        self.connections = connections
+
+    def get_connections(self):
+        return self.connections
 
 
 
