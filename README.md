@@ -10,4 +10,5 @@ PYNTSC (Pint See) - Python (GTK) Network Terminal Services Client
 ## Roadmap
 
 * Support TreeView popup menus for category and item editing / creation
-
+* Support credential inheritance
+* Add ability to disconnect
