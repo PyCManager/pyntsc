@@ -8,13 +8,37 @@ import subprocess
 class pyntsc:
 
     def __init__(self):
+        self.connection = {}
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.connect("delete_event", self.delete_event)
         self.window.connect("destroy", self.destroy)
         self.window.set_border_width(10)
+        gtk.Window.set_geometry_hints(self.window, min_width=650, min_height=400, max_width=-1, max_height=-1, base_width=650, base_height=400)
 
-        #### ADD Tree View block
-        #self.text = self.make_text("This is a test\n")
+        self.make_treeview()
+
+        connection = self.fetch_tree_model()
+
+        #self.rd_Haloween = rDesktop(connection['Home']['Snow'])
+        #self.rd_Appsrv = rDesktop(connection['Home']['AppServer'])
+
+        #self.socketH = self.rd_Haloween._get_socket()
+        #self.socketA = self.rd_Appsrv._get_socket()
+
+        self.notebook = self.make_notebook()
+
+        self.hpaned = self.hpane()
+
+        #print "Socket ID: {0}".format(self.socketH.get_id())
+        #print "Socket ID: {0}".format(self.socketA.get_id())
+        #self.hproc = self.rd_Haloween._get_proc()
+        #self.aproc = self.rd_Appsrv._get_proc()
+
+        self.window.show_all()
+        #self.rd_Haloween.start()
+        #self.rd_Appsrv.start()
+
+    def make_treeview(self):
         machine_tree = self.fetch_tree_model()
         self.treestore = gtk.TreeStore(str)
         for item_cat, item_dict in machine_tree.iteritems():
@@ -42,61 +66,75 @@ class pyntsc:
         self.tree.set_search_column(0)
         self.tree.set_reorderable(False)
         self.tree.set_enable_search(True)
+        self.tree.connect('button-press-event', self.treeview_button_press)
 
         self.tree_scroll.add(self.tree)
 
-        ### End Tree View Block
-        connection = self.fetch_tree_model()
+    def treeview_button_press(self, treeview, event):
+        print "x, y: {0},{1}".format(str(event.x), str(event.y))
+        treeselection = self.tree.get_selection()
+        (model, iter) = treeselection.get_selected()
+        name_of_connection = self.treestore.get_value(iter, 0)
 
-        self.rd_Haloween = rDesktop(connection['Home']['Snow'])
-        self.rd_Appsrv = rDesktop(connection['Home']['Appsrv'])
+        print "event.button: {0}, event.type: {1}".format(event.button, event.type)
+        print "{0}".format(gtk.gdk._2BUTTON_PRESS)
 
-        self.socketH = self.rd_Haloween._get_socket()
-        self.socketA = self.rd_Appsrv._get_socket()
+        if event.button == 3:
+            try:
+                path, col, cellx, celly = treeview.get_path_at_pos(int(event.x), int(event.y))
+            except TypeError:
+                print "No associated item with click"
+                self.popup()
+                return True
+            self.popup(name_of_connection)
+        elif event.button == 1 and event.type == gtk.gdk._2BUTTON_PRESS:
+            print "connecting to: {0}".format(name_of_connection)
+            self.connection[name_of_connection] = rDesktop(self.get_machine_data(name_of_connection))
+            appSocket = self.connection[name_of_connection]._get_socket()
+            #hey lets crank up a stupid object just to display some text in a tab here
+            tab_label = gtk.Label(name_of_connection)
+            tab_label.connect('button-press-event', self.connection[name_of_connection].focus)
+            tab = self.notebook.append_page(appSocket, tab_label)
+            self.connection[name_of_connection].start()
+            appSocket.show()
+            self.connection[name_of_connection].focus()
 
-        self.notebook = self.make_notebook()
+    def get_machine_data(self, name):
+        tree_model = self.fetch_tree_model()
+        if name is not None:
+            for cat in tree_model:
+                for item in tree_model[cat]:
+                    if name == item:
+                        return tree_model[cat][item]
 
-        self.hpaned = self.hpane()
+    def popup(self, name=None):
+        #determine if name is a category or item
+        tree_model = self.fetch_tree_model()
+        if name is not None:
+            for cat in tree_model:
+                if name == cat:
+                    self.cat_popup(name)
+                    break
+                for item in tree_model[cat]:
+                    if name == item:
+                        self.item_popup(name)
+                        break
+        else:
+            self.cat_popup(None)
 
-        print "Socket ID: {0}".format(self.socketH.get_id())
-        print "Socket ID: {0}".format(self.socketA.get_id())
-        self.hproc = self.rd_Haloween._get_proc()
-        self.aproc = self.rd_Appsrv._get_proc()
+    def cat_popup(self, name):
+        if name is None:
+            print "new Cat Popup"
+        else:
+            print "in Cat Popup"
 
-        self.window.show_all()
-        self.rd_Haloween.start()
-        self.rd_Appsrv.start()
+    def item_popup(self, name):
+        print "in item popup"
 
 
     def fetch_tree_model(self):
-        #tree = {}
-        #tree['Home'] = {}
-        #tree['Home']['Haloween'] = {"Host": "192.168.5.46", "Port": 3389}
-        #tree['Home']['Appsrv'] = {"Host": "192.168.5.8", "Port": 9001}
         self.datafile = DataFile()
         return self.datafile.get_connections()
-        #return tree
-
-    def tree_select(self):
-        print "tree element selected"
-
-    def tree_unselect(self):
-        print "tree element unselected"
-
-    def item_select(self):
-        print "item selected"
-
-    def item_deselect(self):
-        print "item unselected"
-
-    def item_toggle(self):
-        print "item toggled"
-
-    def item_expand(self):
-        print "item expanded"
-
-    def item_collapse(self):
-        print "item collapsed"
 
     def __del__(self):
         print "rdesktops terminated"
@@ -104,28 +142,17 @@ class pyntsc:
     def make_notebook(self):
         notebook = gtk.Notebook()
         notebook.set_tab_pos(gtk.POS_TOP)
-        notebook.append_page(self.socketA, None)
-        notebook.append_page(self.socketH, None)
 
         return notebook
-
-    def make_text(self, string):
-        text = gtk.TextView()
-        buffer = text.get_buffer()
-        iter = buffer.get_iter_at_offset(0)
-        buffer.insert(iter, string)
-
-        return text
 
     def hpane(self):
         hpaned = gtk.HPaned()
         self.window.add(hpaned)
 
-        #hpaned.add1(self.text)
         hpaned.add1(self.tree_scroll)
         hpaned.add2(self.notebook)
 
-        hpaned.set_position(300)
+        hpaned.set_position(150)
 
         return hpaned
 
@@ -157,6 +184,7 @@ class rDesktop(object):
     def _get_socket(self):
         if not self.socket:
             self.socket = gtk.Socket()
+            self.socket.connect('button-press-event', self.focus)
         return self.socket
 
     def _get_proc(self):
@@ -170,6 +198,11 @@ class rDesktop(object):
             "{host}:{port}".format(host=self.host, port=self.port)
             ])
         socket.child_focus(gtk.DIR_TAB_FORWARD)
+
+    def focus(self):
+        print "calling focus to socket"
+        self.socket.grab_focus()
+        self.socket.child_focus(gtk.DIR_TAB_FORWARD)
 
     def __del__(self):
         self.process.terminate()
