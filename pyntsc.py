@@ -19,24 +19,11 @@ class pyntsc:
 
         connection = self.fetch_tree_model()
 
-        #self.rd_Haloween = rDesktop(connection['Home']['Snow'])
-        #self.rd_Appsrv = rDesktop(connection['Home']['AppServer'])
-
-        #self.socketH = self.rd_Haloween._get_socket()
-        #self.socketA = self.rd_Appsrv._get_socket()
-
         self.notebook = self.make_notebook()
 
         self.hpaned = self.hpane()
 
-        #print "Socket ID: {0}".format(self.socketH.get_id())
-        #print "Socket ID: {0}".format(self.socketA.get_id())
-        #self.hproc = self.rd_Haloween._get_proc()
-        #self.aproc = self.rd_Appsrv._get_proc()
-
         self.window.show_all()
-        #self.rd_Haloween.start()
-        #self.rd_Appsrv.start()
 
     def make_treeview(self):
         machine_tree = self.fetch_tree_model()
@@ -222,7 +209,7 @@ class DataFile(object):
 
     def make_dir(self):
         if not os.path.exists(os.path.expanduser(self.data_dir)):
-            os.mkdir(self.data_dir, 0700)
+            os.mkdir(os.path.expanduser(self.data_dir), 0700)
 
     def write(self):
         self.make_dir()
