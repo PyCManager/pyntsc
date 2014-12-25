@@ -188,7 +188,8 @@ class rDesktop(object):
 
     def focus(self):
         print "calling focus to socket"
-        self.socket.grab_focus()
+        self.socket.set_can_focus(true);
+        #self.socket.grab_focus()
         self.socket.child_focus(gtk.DIR_TAB_FORWARD)
 
     def __del__(self):
