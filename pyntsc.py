@@ -59,32 +59,64 @@ class pyntsc:
 
     def treeview_button_press(self, treeview, event):
         print "x, y: {0},{1}".format(str(event.x), str(event.y))
+        pthinfo = treeview.get_path_at_pos(int(event.x), int(event.y))
+        if pthinfo is not None:
+            path, col, cellx, celly = pthinfo
+            treeview.grab_focus()
+            treeview.set_cursor(path, col, 0)
+        else:
+            print "No associated item with click"
+            self.right_click_menu(event, False, None)
+            return True
         treeselection = self.tree.get_selection()
         (model, iter) = treeselection.get_selected()
-        name_of_connection = self.treestore.get_value(iter, 0)
+        print "iter is: {0}".format(iter)
+        if iter is not None:
+            name_of_connection = self.treestore.get_value(iter, 0)
 
         print "event.button: {0}, event.type: {1}".format(event.button, event.type)
         print "{0}".format(gtk.gdk._2BUTTON_PRESS)
 
         if event.button == 3:
-            try:
-                path, col, cellx, celly = treeview.get_path_at_pos(int(event.x), int(event.y))
-            except TypeError:
-                print "No associated item with click"
-                self.popup()
-                return True
-            self.popup(name_of_connection)
+            self.right_click_menu(event, True, name_of_connection)
         elif event.button == 1 and event.type == gtk.gdk._2BUTTON_PRESS:
             print "connecting to: {0}".format(name_of_connection)
             self.connection[name_of_connection] = rDesktop(self.get_machine_data(name_of_connection))
             appSocket = self.connection[name_of_connection]._get_socket()
-            #hey lets crank up a stupid object just to display some text in a tab here
             tab_label = gtk.Label(name_of_connection)
             tab_label.connect('button-press-event', self.connection[name_of_connection].focus)
             tab = self.notebook.append_page(appSocket, tab_label)
             self.connection[name_of_connection].start()
             appSocket.show()
             self.connection[name_of_connection].focus()
+
+    def right_click_menu(self, event, on_item, name):
+        print "Showing right_click_menu"
+        menu = gtk.Menu()
+        edit_menu_item = gtk.MenuItem("Edit Item")
+        edit_menu_item.connect("activate", self.edit_window, name)
+        add_menu_item = gtk.MenuItem("Add Item")
+        edit_menu_item.connect("activate", self.edit_window, None)
+        if on_item:
+            menu.append(edit_menu_item)
+            edit_menu_item.show()
+        menu.append(add_menu_item)
+        add_menu_item.show()
+        menu.popup(None, None, None, event.button, event.time)
+
+    def edit_window(self, name, something_else):
+        print "Name, Something_else: {0}, {1}".format(name, something_else)
+        if name is None:
+            window_name = "Add Item"
+            add = True
+        else:
+            window_name = "Edit Item {0}".format(name)
+        edit_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        edit_window.connect("delete_event", self.delete_event)
+        edit_window.connect("destroy", self.destroy)
+        edit_window.set_border_width(10)
+        edit_window.set_position(gtk.WIN_POS_CENTER)
+        edit_window.label = gtk.Label(window_name)
 
     def get_machine_data(self, name):
         tree_model = self.fetch_tree_model()
@@ -93,31 +125,6 @@ class pyntsc:
                 for item in tree_model[cat]:
                     if name == item:
                         return tree_model[cat][item]
-
-    def popup(self, name=None):
-        #determine if name is a category or item
-        tree_model = self.fetch_tree_model()
-        if name is not None:
-            for cat in tree_model:
-                if name == cat:
-                    self.cat_popup(name)
-                    break
-                for item in tree_model[cat]:
-                    if name == item:
-                        self.item_popup(name)
-                        break
-        else:
-            self.cat_popup(None)
-
-    def cat_popup(self, name):
-        if name is None:
-            print "new Cat Popup"
-        else:
-            print "in Cat Popup"
-
-    def item_popup(self, name):
-        print "in item popup"
-
 
     def fetch_tree_model(self):
         self.datafile = DataFile()
@@ -188,7 +195,7 @@ class rDesktop(object):
 
     def focus(self):
         print "calling focus to socket"
-        self.socket.set_can_focus(true);
+        self.socket.set_can_focus(True);
         #self.socket.grab_focus()
         self.socket.child_focus(gtk.DIR_TAB_FORWARD)
 
