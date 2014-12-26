@@ -64,21 +64,19 @@ class pyntsc:
             path, col, cellx, celly = pthinfo
             treeview.grab_focus()
             treeview.set_cursor(path, col, 0)
-        else:
-            print "No associated item with click"
-            self.right_click_menu(event, False, None)
-            return True
         treeselection = self.tree.get_selection()
         (model, iter) = treeselection.get_selected()
         print "iter is: {0}".format(iter)
         if iter is not None:
             name_of_connection = self.treestore.get_value(iter, 0)
+        else:
+            name_of_connection = None
 
         print "event.button: {0}, event.type: {1}".format(event.button, event.type)
         print "{0}".format(gtk.gdk._2BUTTON_PRESS)
 
         if event.button == 3:
-            self.right_click_menu(event, True, name_of_connection)
+            self.right_click_menu(event, name_of_connection)
         elif event.button == 1 and event.type == gtk.gdk._2BUTTON_PRESS:
             print "connecting to: {0}".format(name_of_connection)
             self.connection[name_of_connection] = rDesktop(self.get_machine_data(name_of_connection))
@@ -90,14 +88,14 @@ class pyntsc:
             appSocket.show()
             self.connection[name_of_connection].focus()
 
-    def right_click_menu(self, event, on_item, name):
+    def right_click_menu(self, event, name):
         print "Showing right_click_menu"
         menu = gtk.Menu()
         edit_menu_item = gtk.MenuItem("Edit Item")
         edit_menu_item.connect("activate", self.edit_window, name)
         add_menu_item = gtk.MenuItem("Add Item")
-        edit_menu_item.connect("activate", self.edit_window, None)
-        if on_item:
+        add_menu_item.connect("activate", self.edit_window, None)
+        if name is not None:
             menu.append(edit_menu_item)
             edit_menu_item.show()
         menu.append(add_menu_item)
@@ -112,11 +110,12 @@ class pyntsc:
         else:
             window_name = "Edit Item {0}".format(name)
         edit_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        edit_window.connect("delete_event", self.delete_event)
-        edit_window.connect("destroy", self.destroy)
+        #edit_window.connect("delete_event", edit_window.delete_event)
+        edit_window.connect("destroy", edit_window.destroy)
         edit_window.set_border_width(10)
         edit_window.set_position(gtk.WIN_POS_CENTER)
         edit_window.label = gtk.Label(window_name)
+        edit_window.show()
 
     def get_machine_data(self, name):
         tree_model = self.fetch_tree_model()
