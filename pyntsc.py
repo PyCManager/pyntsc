@@ -9,6 +9,7 @@ class pyntsc:
 
     def __init__(self):
         self.connection = {}
+        self.datafile = DataFile()
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.connect("delete_event", self.delete_event)
         self.window.connect("destroy", self.destroy)
@@ -17,8 +18,6 @@ class pyntsc:
 
         self.make_treeview()
 
-        connection = self.fetch_tree_model()
-
         self.notebook = self.make_notebook()
 
         self.hpaned = self.hpane()
@@ -26,7 +25,7 @@ class pyntsc:
         self.window.show_all()
 
     def make_treeview(self):
-        machine_tree = self.fetch_tree_model()
+        machine_tree = self.datafile.get_connections()
         self.treestore = gtk.TreeStore(str)
         for item_cat, item_dict in machine_tree.iteritems():
             print "adding group: {0}".format(item_cat)
@@ -79,13 +78,13 @@ class pyntsc:
             self.right_click_menu(event, name_of_connection)
         elif event.button == 1 and event.type == gtk.gdk._2BUTTON_PRESS:
             print "connecting to: {0}".format(name_of_connection)
-            self.connection[name_of_connection] = rDesktop(self.get_machine_data(name_of_connection))
-            appSocket = self.connection[name_of_connection]._get_socket()
+            self.connection[name_of_connection] = rDesktop(self.datafile.get_connection_data(name_of_connection))
+            app_socket = self.connection[name_of_connection]._get_socket()
             tab_label = gtk.Label(name_of_connection)
             tab_label.connect('button-press-event', self.connection[name_of_connection].focus)
-            tab = self.notebook.append_page(appSocket, tab_label)
+            tab = self.notebook.append_page(app_socket, tab_label)
             self.connection[name_of_connection].start()
-            appSocket.show()
+            app_socket.show()
             self.connection[name_of_connection].focus()
 
     def right_click_menu(self, event, name):
@@ -124,6 +123,12 @@ class pyntsc:
         #fixed.put(label, 60, 40)
         table = gtk.Table(7, 3)
 
+        category_label = gtk.Label("Category:")
+        category_combo = gtk.combo_box_entry_new_text()
+        cats = self.datafile.get_categories()
+        for cat in cats:
+            category_combo.append_text(cat)
+
         name_label = gtk.Label("Connection Name:")
         name_label.set_justify(gtk.JUSTIFY_RIGHT)
         name_entry = gtk.Entry()
@@ -131,7 +136,7 @@ class pyntsc:
 
         hostname_label = gtk.Label("Hostname:")
         hostname_label.set_justify(gtk.JUSTIFY_RIGHT)
-        hostname.entry = gtk.Entry()
+        hostname_entry = gtk.Entry()
         hostname_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
 
         port_label = gtk.Label("Port:")
@@ -139,7 +144,7 @@ class pyntsc:
         port_entry = gtk.Entry()
         port_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
 
-        geometry_label = gtk.label("Geometry W/H:")
+        geometry_label = gtk.Label("Geometry W/H:")
         geometry_label.set_justify(gtk.JUSTIFY_RIGHT)
         geometry_X_entry = gtk.Entry()
         geometry_X_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
@@ -153,14 +158,6 @@ class pyntsc:
         edit_window.add(table)
 
         edit_window.show_all()
-
-    def get_machine_data(self, name):
-        tree_model = self.fetch_tree_model()
-        if name is not None:
-            for cat in tree_model:
-                for item in tree_model[cat]:
-                    if name == item:
-                        return tree_model[cat][item]
 
     def fetch_tree_model(self):
         self.datafile = DataFile()
@@ -266,6 +263,21 @@ class DataFile(object):
     def get_connections(self):
         return self.connections
 
+    def get_connection_data(self, name):
+        tree_model = self.get_connections()
+        if name is not None:
+            for cat in tree_model:
+                for item in tree_model[cat]:
+                    if name == item:
+                        entry = tree_model[cat][item]
+                        entry['Parent'] = cat
+                        return entry
+
+    def get_categories(self):
+        tree_model = self.get_connections()
+        cats = tree_model.keys()
+        print "get_categories returning: {0}".format(cats)
+        return cats
 
 
 if __name__ == "__main__":
