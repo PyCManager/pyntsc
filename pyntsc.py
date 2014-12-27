@@ -105,17 +105,54 @@ class pyntsc:
     def edit_window(self, name, something_else):
         print "Name, Something_else: {0}, {1}".format(name, something_else)
         if name is None:
-            window_name = "Add Item"
+            window_name = "Add Connection"
             add = True
         else:
-            window_name = "Edit Item {0}".format(name)
+            window_name = "Edit Connection {0}".format(name)
+
+        #create Window
         edit_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         #edit_window.connect("delete_event", edit_window.delete_event)
         edit_window.connect("destroy", edit_window.destroy)
         edit_window.set_border_width(10)
         edit_window.set_position(gtk.WIN_POS_CENTER)
         edit_window.label = gtk.Label(window_name)
-        edit_window.show()
+        edit_window.set_size_request(250, 200)
+
+        #Create structure
+        #fixed = gtk.Fixed()
+        #fixed.put(label, 60, 40)
+        table = gtk.Table(7, 3)
+
+        name_label = gtk.Label("Connection Name:")
+        name_label.set_justify(gtk.JUSTIFY_RIGHT)
+        name_entry = gtk.Entry()
+        name_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+
+        hostname_label = gtk.Label("Hostname:")
+        hostname_label.set_justify(gtk.JUSTIFY_RIGHT)
+        hostname.entry = gtk.Entry()
+        hostname_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+
+        port_label = gtk.Label("Port:")
+        port_label.set_justify(gtk.JUSTIFY_RIGHT)
+        port_entry = gtk.Entry()
+        port_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+
+        geometry_label = gtk.label("Geometry W/H:")
+        geometry_label.set_justify(gtk.JUSTIFY_RIGHT)
+        geometry_X_entry = gtk.Entry()
+        geometry_X_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+        geometry_Y_entry = gtk.Entry()
+        geometry_Y_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+
+        #I'm here
+
+        table.attach(label, 0, 1, 0, 1)
+        table.attach(entry, 1, 2, 0, 1)
+        edit_window.add(table)
+
+        edit_window.show_all()
 
     def get_machine_data(self, name):
         tree_model = self.fetch_tree_model()
