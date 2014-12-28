@@ -30,7 +30,7 @@ class pyntsc:
         for item_cat, item_dict in machine_tree.iteritems():
             print "adding group: {0}".format(item_cat)
             piter = self.treestore.append(None, [item_cat])
-            for item_name, item_details in item_dict.iteritems():
+            for item_name, item_details in item_dict['Items'].iteritems():
                 print "adding item: {0}".format(item_name)
                 self.treestore.append(piter, [item_name])
 
@@ -101,13 +101,16 @@ class pyntsc:
         add_menu_item.show()
         menu.popup(None, None, None, event.button, event.time)
 
-    def edit_window(self, name, something_else):
-        print "Name, Something_else: {0}, {1}".format(name, something_else)
+    def edit_window(self, object, name):
+        #print "Name, Something_else: {0}, {1}".format(name, something_else)
         if name is None:
             window_name = "Add Connection"
             add = True
         else:
             window_name = "Edit Connection {0}".format(name)
+
+        data = self.datafile.get_connection_data(name)
+        print "data: {0}".format(data)
 
         #create Window
         edit_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -116,12 +119,12 @@ class pyntsc:
         edit_window.set_border_width(10)
         edit_window.set_position(gtk.WIN_POS_CENTER)
         edit_window.label = gtk.Label(window_name)
-        edit_window.set_size_request(250, 200)
+        edit_window.set_size_request(472, 313)
 
         #Create structure
         #fixed = gtk.Fixed()
         #fixed.put(label, 60, 40)
-        table = gtk.Table(7, 3)
+        table = gtk.Table(9, 3)
 
         category_label = gtk.Label("Category:")
         category_combo = gtk.combo_box_entry_new_text()
@@ -129,39 +132,115 @@ class pyntsc:
         for cat in cats:
             category_combo.append_text(cat)
 
+        cat_add = gtk.Button("Add")
+        cat_edit = gtk.Button("Edit")
+
+        cat_separator = gtk.HSeparator()
+
         name_label = gtk.Label("Connection Name:")
         name_label.set_justify(gtk.JUSTIFY_RIGHT)
         name_entry = gtk.Entry()
         name_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+        name_entry.set_text(data['Name'])
 
         hostname_label = gtk.Label("Hostname:")
         hostname_label.set_justify(gtk.JUSTIFY_RIGHT)
         hostname_entry = gtk.Entry()
         hostname_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+        hostname_entry.set_text(str(data['Host']))
 
         port_label = gtk.Label("Port:")
         port_label.set_justify(gtk.JUSTIFY_RIGHT)
         port_entry = gtk.Entry()
         port_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+        port_entry.set_text(str(data['Port']))
 
         geometry_label = gtk.Label("Geometry W/H:")
         geometry_label.set_justify(gtk.JUSTIFY_RIGHT)
         geometry_X_entry = gtk.Entry()
         geometry_X_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+        geometry_X_entry.set_text(str(data['GeoX']))
         geometry_Y_entry = gtk.Entry()
         geometry_Y_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+        geometry_Y_entry.set_text(str(data['GeoY']))
 
-        #I'm here
+        def kill_window(thing):
+            edit_window.destroy()
 
-        table.attach(label, 0, 1, 0, 1)
-        table.attach(entry, 1, 2, 0, 1)
+        button_separator = gtk.HSeparator()
+        delete_button = gtk.Button("Delete")
+        ok_button = gtk.Button("Ok")
+        cancel_button = gtk.Button("Cancel")
+        cancel_button.connect("released", kill_window)
+
+        table.attach(category_label, 0, 1, 0, 1)
+        table.attach(category_combo, 1, 3, 0, 1)
+        table.attach(cat_add, 1, 2, 1, 2)
+        table.attach(cat_edit, 2, 3, 1, 2)
+        table.attach(cat_separator, 0, 3, 2, 3)
+        table.attach(name_label, 0, 1, 3, 4)
+        table.attach(name_entry, 1, 3, 3, 4)
+        table.attach(hostname_label, 0, 1, 4, 5)
+        table.attach(hostname_entry, 1, 3, 4, 5)
+        table.attach(port_label, 0, 1, 5, 6)
+        table.attach(port_entry, 1, 3, 5, 6)
+        table.attach(geometry_label, 0, 1, 6, 7)
+        table.attach(geometry_X_entry, 1, 2, 6, 7)
+        table.attach(geometry_Y_entry, 2, 3, 6, 7)
+        table.attach(button_separator, 0, 1, 7, 8)
+        table.attach(delete_button, 0, 1, 8, 9)
+        table.attach(ok_button, 1, 2, 8, 9)
+        table.attach(cancel_button, 2, 3, 8, 9)
+
         edit_window.add(table)
 
         edit_window.show_all()
 
-    def fetch_tree_model(self):
-        self.datafile = DataFile()
-        return self.datafile.get_connections()
+    def cat_edit_window(self):
+        cat_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        cat_window.connect("destroy", cat_window.destroy)
+        cat_window.set_border_width(10)
+        cat_window.set_position(gtk.WIN_POS_CENTER)
+        cat_window.label = gtk.Label("Edit Category")
+        cat_window.set_size_request(472, 313)
+
+        table = gtk.Table(5, 3)
+
+        category_name_label = gtk.Label("Category Name:")
+        category_name_entry = gtk.Entry()
+        category_name_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+
+        username_label = gtk.Label("Username:")
+        username_entry = gtk.Entry()
+        username_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+
+        password_label = gtk.Label("Password:")
+        password_entry = gtk.Entry()
+        password_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+        password_entry.set_visibility(False)
+
+        domain_label = gtk.Label("Domain:")
+        domain_entry = gtk.Entry()
+        domain_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
+
+        delete_button = gtk.Button("Delete")
+        ok_button = gtk.Button("Ok")
+        cancel_button = gtk.Button("Cancel")
+
+        table.attach(category_name_label, 0, 1, 0, 1)
+        table.attach(category_name_entry, 1, 3, 0, 1)
+        table.attach(username_label, 0, 1, 1, 2)
+        table.attach(username_entry, 1, 3, 1, 2)
+        table.attach(password_label, 0, 1, 2, 3)
+        table.attach(password_entry, 1, 3, 2, 3)
+        table.attach(domain_label, 0, 1, 3, 4)
+        table.attach(domain_entry, 1, 3, 3, 4)
+        table.attach(delete_button, 0, 1, 4, 5)
+        table.attach(ok_button, 1, 2, 4, 5)
+        table.attach(cancel_button, 2, 3, 4, 5)
+
+        cat_window.add(table)
+        cat_window.show_all()
 
     def __del__(self):
         print "rdesktops terminated"
@@ -264,13 +343,15 @@ class DataFile(object):
         return self.connections
 
     def get_connection_data(self, name):
+        print "get_connection_data is looking for: {0}".format(name)
         tree_model = self.get_connections()
         if name is not None:
             for cat in tree_model:
-                for item in tree_model[cat]:
+                for item in tree_model[cat]['Items']:
                     if name == item:
-                        entry = tree_model[cat][item]
+                        entry = tree_model[cat]['Items'][item]
                         entry['Parent'] = cat
+                        entry['Name'] = item
                         return entry
 
     def get_categories(self):
