@@ -90,50 +90,85 @@ class pyntsc:
     def right_click_menu(self, event, name):
         print "Showing right_click_menu"
         menu = gtk.Menu()
-        edit_menu_item = gtk.MenuItem("Edit Item")
-        edit_menu_item.connect("activate", self.edit_window, name)
+        if name is not None:
+            if self.datafile.is_category(name):
+                edit_category = gtk.MenuItem("Edit Category")
+                edit_category.connect("activate", self.cat_edit_window, name)
+                add_category = gtk.MenuItem("Add Category")
+                add_category.connect("activate", self.cat_edit_window, None)
+                menu.append(edit_category)
+                menu.append(add_category)
+                edit_category.show()
+                add_category.show()
+            else:
+                edit_menu_item = gtk.MenuItem("Edit Item")
+                edit_menu_item.connect("activate", self.edit_window, name)
+                menu.append(edit_menu_item)
+                edit_menu_item.show()
+
         add_menu_item = gtk.MenuItem("Add Item")
         add_menu_item.connect("activate", self.edit_window, None)
-        if name is not None:
-            menu.append(edit_menu_item)
-            edit_menu_item.show()
+
         menu.append(add_menu_item)
         add_menu_item.show()
         menu.popup(None, None, None, event.button, event.time)
+        return
 
     def edit_window(self, object, name):
-        #print "Name, Something_else: {0}, {1}".format(name, something_else)
         if name is None:
             window_name = "Add Connection"
             add = True
+            data = dict()
+            data['Category'] = ""
+            data['Host'] = ""
+            data['Name'] = ""
+            data['Port'] = 3306
+            data['GeoX'] = 640
+            data['GeoY'] = 480
         else:
+            add = False
             window_name = "Edit Connection {0}".format(name)
+            data = self.datafile.get_connection_data(name)
+            print "data: {0}".format(data)
 
-        data = self.datafile.get_connection_data(name)
-        print "data: {0}".format(data)
-
-        #create Window
+        # Create Window
         edit_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        #edit_window.connect("delete_event", edit_window.delete_event)
         edit_window.connect("destroy", edit_window.destroy)
         edit_window.set_border_width(10)
         edit_window.set_position(gtk.WIN_POS_CENTER)
         edit_window.label = gtk.Label(window_name)
-        edit_window.set_size_request(472, 313)
+        edit_window.set_size_request(472, 250)
 
-        #Create structure
-        #fixed = gtk.Fixed()
-        #fixed.put(label, 60, 40)
+        # Create structure
         table = gtk.Table(9, 3)
 
-        category_label = gtk.Label("Category:")
-        category_combo = gtk.combo_box_entry_new_text()
         cats = self.datafile.get_categories()
+        cat_cnt = 0
+        cat_store = gtk.ListStore(int, str)
+        target_cat = None
         for cat in cats:
-            category_combo.append_text(cat)
+            if cat == data['Category']:
+                target_cat = cat_cnt
+            cat_store.append([cat_cnt, cat])
+
+        # on to the elements
+        category_label = gtk.Label("Category:")
+        category_label.set_justify(gtk.JUSTIFY_RIGHT)
+        category_combo = gtk.combo_box_new_with_model_and_entry(cat_store)
+        category_combo.set_entry_text_column(1)
+        if target_cat is not None:
+            category_combo.set_active(target_cat)
+
+        def call_cat_add(thing):
+            self.cat_edit_window("thing", None)
+
+        def call_cat_edit(thing):
+            self.cat_edit_window("thing", data['Category'])
 
         cat_add = gtk.Button("Add")
+        cat_add.connect("released", call_cat_add)
         cat_edit = gtk.Button("Edit")
+        cat_edit.connect("released", call_cat_edit)
 
         cat_separator = gtk.HSeparator()
 
@@ -151,28 +186,35 @@ class pyntsc:
 
         port_label = gtk.Label("Port:")
         port_label.set_justify(gtk.JUSTIFY_RIGHT)
-        port_entry = gtk.Entry()
-        port_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
-        port_entry.set_text(str(data['Port']))
+        port_adj = gtk.Adjustment(data['Port'], 0, 65535, 1)
+        port_spin = gtk.SpinButton(port_adj, 0.0, 0)
 
         geometry_label = gtk.Label("Geometry W/H:")
         geometry_label.set_justify(gtk.JUSTIFY_RIGHT)
-        geometry_X_entry = gtk.Entry()
-        geometry_X_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
-        geometry_X_entry.set_text(str(data['GeoX']))
-        geometry_Y_entry = gtk.Entry()
-        geometry_Y_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
-        geometry_Y_entry.set_text(str(data['GeoY']))
+        geometry_X_adj = gtk.Adjustment(data['GeoX'], 320, 4096, 1)
+        geometry_X_spin = gtk.SpinButton(geometry_X_adj, 0.0, 0)
+        geometry_Y_adj = gtk.Adjustment(data['GeoY'], 200, 4096, 1)
+        geometry_Y_spin = gtk.SpinButton(geometry_Y_adj, 0.0, 0)
 
         def kill_window(thing):
             edit_window.destroy()
 
+        def save_entry(thing):
+            entry = dict()
+            kill_window(None)
+
+        def delete_entry(thing):
+            pass
+
         button_separator = gtk.HSeparator()
         delete_button = gtk.Button("Delete")
-        ok_button = gtk.Button("Ok")
+        delete_button.connect("released", delete_entry)
+        save_button = gtk.Button("Save")
+        save_button.connect("released", save_entry)
         cancel_button = gtk.Button("Cancel")
         cancel_button.connect("released", kill_window)
 
+        # layout party
         table.attach(category_label, 0, 1, 0, 1)
         table.attach(category_combo, 1, 3, 0, 1)
         table.attach(cat_add, 1, 2, 1, 2)
@@ -183,49 +225,79 @@ class pyntsc:
         table.attach(hostname_label, 0, 1, 4, 5)
         table.attach(hostname_entry, 1, 3, 4, 5)
         table.attach(port_label, 0, 1, 5, 6)
-        table.attach(port_entry, 1, 3, 5, 6)
+        table.attach(port_spin, 1, 3, 5, 6)
         table.attach(geometry_label, 0, 1, 6, 7)
-        table.attach(geometry_X_entry, 1, 2, 6, 7)
-        table.attach(geometry_Y_entry, 2, 3, 6, 7)
+        table.attach(geometry_X_spin, 1, 2, 6, 7)
+        table.attach(geometry_Y_spin, 2, 3, 6, 7)
         table.attach(button_separator, 0, 1, 7, 8)
         table.attach(delete_button, 0, 1, 8, 9)
-        table.attach(ok_button, 1, 2, 8, 9)
+        table.attach(save_button, 1, 2, 8, 9)
         table.attach(cancel_button, 2, 3, 8, 9)
 
         edit_window.add(table)
 
         edit_window.show_all()
 
-    def cat_edit_window(self):
+    def cat_edit_window(self, thing, category):
+        if category is None:
+            window_name = "Add Category"
+            add = True
+            data = dict()
+            data['Name'] = ""
+            data['Username'] = ""
+            data['Password'] = ""
+            data['Domain'] = ""
+        else:
+            add = False
+            window_name = "Edit Category {0}".format(category)
+            data = self.datafile.get_category_data(category)
+            print "data: {0}".format(data)
+
         cat_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         cat_window.connect("destroy", cat_window.destroy)
         cat_window.set_border_width(10)
         cat_window.set_position(gtk.WIN_POS_CENTER)
-        cat_window.label = gtk.Label("Edit Category")
-        cat_window.set_size_request(472, 313)
+        cat_window.label = gtk.Label(window_name)
+        cat_window.set_size_request(300, 170)
 
         table = gtk.Table(5, 3)
 
         category_name_label = gtk.Label("Category Name:")
         category_name_entry = gtk.Entry()
+        category_name_entry.set_text(data['Name'])
         category_name_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
 
         username_label = gtk.Label("Username:")
         username_entry = gtk.Entry()
+        username_entry.set_text(data['Username'])
         username_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
 
         password_label = gtk.Label("Password:")
         password_entry = gtk.Entry()
+        password_entry.set_text(data['Password'])
         password_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
         password_entry.set_visibility(False)
 
         domain_label = gtk.Label("Domain:")
         domain_entry = gtk.Entry()
+        domain_entry.set_text(data['Domain'])
         domain_entry.add_events(gtk.gdk.KEY_RELEASE_MASK)
 
+        def kill_window(thing):
+            cat_window.destroy()
+
+        def save_entry(thing):
+            pass
+
+        def delete_entry(thing):
+            pass
+
         delete_button = gtk.Button("Delete")
-        ok_button = gtk.Button("Ok")
+        delete_button.connect("released", delete_entry)
+        save_button = gtk.Button("Save")
+        save_button.connect("released", save_entry)
         cancel_button = gtk.Button("Cancel")
+        cancel_button.connect("released", kill_window)
 
         table.attach(category_name_label, 0, 1, 0, 1)
         table.attach(category_name_entry, 1, 3, 0, 1)
@@ -236,7 +308,7 @@ class pyntsc:
         table.attach(domain_label, 0, 1, 3, 4)
         table.attach(domain_entry, 1, 3, 3, 4)
         table.attach(delete_button, 0, 1, 4, 5)
-        table.attach(ok_button, 1, 2, 4, 5)
+        table.attach(save_button, 1, 2, 4, 5)
         table.attach(cancel_button, 2, 3, 4, 5)
 
         cat_window.add(table)
@@ -324,8 +396,9 @@ class DataFile(object):
         if not os.path.isfile(os.path.expanduser("{0}/{1}".format(self.data_dir, self.data_file))):
             self.connections = {}
         else:
-            self.rfile = open(os.path.expanduser("{0}/{1}".format(self.data_dir, self.data_file)), 'r')
-            self.connections = json.loads(self.rfile.read())
+            rfile = open(os.path.expanduser("{0}/{1}".format(self.data_dir, self.data_file)), 'r')
+            self.connections = json.loads(rfile.read())
+            rfile.close()
 
     def make_dir(self):
         if not os.path.exists(os.path.expanduser(self.data_dir)):
@@ -333,9 +406,55 @@ class DataFile(object):
 
     def write(self):
         self.make_dir()
-        self.wfile = open(os.path,expanduser("{0}/{1}".format(self.data_dir, self.data_file)), 'w')
-        self.wfile.write(json.dumps(self.connections))
+        wfile = open(os.path.expanduser("{0}/{1}".format(self.data_dir, self.data_file)), 'w')
+        wfile.write(json.dumps(self.connections))
+        wfile.close()
 
+    def add_connection(self, item):
+        if item['Name'] in self.connections[item['Category']]['Items'].keys():
+            return False
+        #self.connections[item['Category']]['Items'][item['Name']] = item['Name']
+        self.connections[item['Category']]['Items'][item['Name']]['Host'] = item['Host']
+        self.connections[item['Category']]['Items'][item['Name']]['Port'] = item['Port']
+        self.connections[item['Category']]['Items'][item['Name']]['GeoX'] = item['GeoX']
+        self.connections[item['Category']]['Items'][item['Name']]['GeoY'] = item['GeoY']
+        self.write()
+        return True
+
+    def delete_connection(self, item):
+        del self.connections[item['Category']]['Items'][item['Name']]
+        self.write()
+
+    def edit_connection(self, item, orig_item):
+        if item['Name'] in self.connections[item['Category']]['Items'].keys():
+            if item['Name'] is not orig_item['Name']:
+                return False
+            if item['Category'] is not orig_item['Category']:
+                return False
+
+        self.delete_connection(orig_item)
+        self.add_connection(item)
+        return True
+
+    def add_category(self, category):
+        if category['Name'] in self.connections.keys():
+            return False
+        self.connections[category['Name']]['Username'] = category['Username']
+        self.connections[category['Name']]['Password'] = category['Password']
+        self.connections[category['Name']]['Domain'] = category['Domain']
+        self.write()
+        return True
+    
+    def edit_category(self, category, orig_cat):
+        if not self.add_category(category):
+            return False
+        self.connections[category['Name']]['Items'] = self.connections[orig_cat['Name']]['Items']
+        self.delete_category(orig_cat['Name'])
+        
+    def delete_category(self, name):
+        del self.connections[name]
+        self.write()
+    
     def update_connections(self, connections):
         self.connections = connections
 
@@ -350,9 +469,27 @@ class DataFile(object):
                 for item in tree_model[cat]['Items']:
                     if name == item:
                         entry = tree_model[cat]['Items'][item]
-                        entry['Parent'] = cat
+                        entry['Category'] = cat
                         entry['Name'] = item
                         return entry
+
+    def get_category_data(self, category):
+        print "get_category_data is ooking for: {0}".format(category)
+        tree_model = self.get_connections()
+        if category is not None:
+            for cat in tree_model:
+                if category == cat:
+                    return_cat = {"Name": cat,
+                                  "Username": tree_model[cat]['Username'],
+                                  "Password": tree_model[cat]['Password'],
+                                  "Domain": tree_model[cat]['Domain']}
+                    return return_cat
+
+    def is_category(self, name):
+        if name in self.get_categories():
+            return True
+        else:
+            return False
 
     def get_categories(self):
         tree_model = self.get_connections()
