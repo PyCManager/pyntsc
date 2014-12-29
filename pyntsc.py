@@ -24,15 +24,28 @@ class pyntsc:
 
         self.window.show_all()
 
-    def make_treeview(self):
+    def build_treestore(self):
         machine_tree = self.datafile.get_connections()
         self.treestore = gtk.TreeStore(str)
         for item_cat, item_dict in machine_tree.iteritems():
             print "adding group: {0}".format(item_cat)
             piter = self.treestore.append(None, [item_cat])
-            for item_name, item_details in item_dict['Items'].iteritems():
-                print "adding item: {0}".format(item_name)
-                self.treestore.append(piter, [item_name])
+            if len(item_dict) > 0:
+                for item_name, item_details in item_dict['Items'].iteritems():
+                    print "adding item: {0}".format(item_name)
+                    self.treestore.append(piter, [item_name])
+
+    def make_treeview(self):
+        #machine_tree = self.datafile.get_connections()
+        #self.treestore = gtk.TreeStore(str)
+        #for item_cat, item_dict in machine_tree.iteritems():
+        #    print "adding group: {0}".format(item_cat)
+        #    piter = self.treestore.append(None, [item_cat])
+        #    for item_name, item_details in item_dict['Items'].iteritems():
+        #        print "adding item: {0}".format(item_name)
+        #        self.treestore.append(piter, [item_name])
+
+        self.build_treestore()
 
         self.tree_scroll = gtk.ScrolledWindow()
         self.tree_scroll.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
@@ -55,6 +68,11 @@ class pyntsc:
         self.tree.connect('button-press-event', self.treeview_button_press)
 
         self.tree_scroll.add(self.tree)
+
+    def treeview_refresh(self):
+        self.treestore.clear()
+        self.build_treestore()
+        self.tree.set_model(self.treestore)
 
     def treeview_button_press(self, treeview, event):
         print "x, y: {0},{1}".format(str(event.x), str(event.y))
@@ -85,7 +103,20 @@ class pyntsc:
             tab = self.notebook.append_page(app_socket, tab_label)
             self.connection[name_of_connection].start()
             app_socket.show()
-            self.connection[name_of_connection].focus()
+            self.connection[name_of_connection].focus(tab)
+            self.resize_window(name_of_connection)
+
+    def resize_window(self, name):
+        new_width = self.connection[name].GeoX
+        new_height = self.connection[name].GeoY
+
+        # I'm here
+
+        new_width += self.hpaned.get_position()
+        new_width += 30
+        new_height += 60
+
+        self.window.resize(new_width, new_height)
 
     def right_click_menu(self, event, name):
         print "Showing right_click_menu"
@@ -95,7 +126,7 @@ class pyntsc:
                 edit_category = gtk.MenuItem("Edit Category")
                 edit_category.connect("activate", self.cat_edit_window, name)
                 add_category = gtk.MenuItem("Add Category")
-                add_category.connect("activate", self.cat_edit_window, None)
+                add_category.connect("activate", self.cat_edit_window, None, name)
                 menu.append(edit_category)
                 menu.append(add_category)
                 edit_category.show()
@@ -107,19 +138,39 @@ class pyntsc:
                 edit_menu_item.show()
 
         add_menu_item = gtk.MenuItem("Add Item")
-        add_menu_item.connect("activate", self.edit_window, None)
+        add_menu_item.connect("activate", self.edit_window, None, name)
 
         menu.append(add_menu_item)
         add_menu_item.show()
         menu.popup(None, None, None, event.button, event.time)
         return
 
-    def edit_window(self, object, name):
+    def load_combo_ListStore(self, target_category=None):
+            # please fix me, this feels hacky
+
+            cats = self.datafile.get_categories()
+            cat_cnt = 0
+
+            self.cat_store.clear()
+            target_cat = None
+            for cat in cats:
+                if cat == target_category:
+                    target_cat = cat_cnt
+                self.cat_store.append([cat_cnt, cat])
+                cat_cnt += 1
+            try:
+                self.category_combo.set_model(self.cat_store)
+                self.category_combo.set_active(target_cat)
+            except:
+                pass
+            return target_cat
+
+    def edit_window(self, object, name, pre_cat=""):
         if name is None:
             window_name = "Add Connection"
             add = True
             data = dict()
-            data['Category'] = ""
+            data['Category'] = pre_cat
             data['Host'] = ""
             data['Name'] = ""
             data['Port'] = 3306
@@ -142,22 +193,19 @@ class pyntsc:
         # Create structure
         table = gtk.Table(9, 3)
 
-        cats = self.datafile.get_categories()
-        cat_cnt = 0
-        cat_store = gtk.ListStore(int, str)
-        target_cat = None
-        for cat in cats:
-            if cat == data['Category']:
-                target_cat = cat_cnt
-            cat_store.append([cat_cnt, cat])
+        self.cat_store = gtk.ListStore(int, str)
 
         # on to the elements
         category_label = gtk.Label("Category:")
         category_label.set_justify(gtk.JUSTIFY_RIGHT)
-        category_combo = gtk.combo_box_new_with_model_and_entry(cat_store)
-        category_combo.set_entry_text_column(1)
+
+        target_cat = self.load_combo_ListStore(data['Category'])
+
+        self.category_combo = gtk.combo_box_new_with_model_and_entry(self.cat_store)
+        self.category_combo.set_entry_text_column(1)
+
         if target_cat is not None:
-            category_combo.set_active(target_cat)
+            self.category_combo.set_active(target_cat)
 
         def call_cat_add(thing):
             self.cat_edit_window("thing", None)
@@ -200,11 +248,39 @@ class pyntsc:
             edit_window.destroy()
 
         def save_entry(thing):
-            entry = dict()
-            kill_window(None)
+            new_data = dict()
+            new_data['Category'] = self.category_combo.get_active_text()
+            new_data['Name'] = name_entry.get_text()
+            new_data['Host'] = hostname_entry.get_text()
+            new_data['Port'] = int(port_spin.get_value())
+            new_data['GeoX'] = int(geometry_X_spin.get_value())
+            new_data['GeoY'] = int(geometry_Y_spin.get_value())
+            print "Saving: {0}".format(new_data)
+
+            if add:
+                print "Adding Connection"
+                result = self.datafile.add_connection(new_data)
+            else:
+                print "Editing Connection"
+                result = self.datafile.edit_connection(new_data, data)
+            if not result:
+                dialog = gtk.MessageDialog(edit_window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR, gtk.BUTTONS_OK, "AnErrErccered...")
+                dialog.set_title("ERMAHGERD!")
+                ok = dialog.run()
+                dialog.destroy()
+            else:
+                self.treeview_refresh()
+                kill_window(None)
 
         def delete_entry(thing):
-            pass
+            dialog = gtk.MessageDialog(edit_window, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_YES_NO, "Are you sure?")
+            dialog.set_title("Delete Connection")
+            response = dialog.run()
+            dialog.destroy()
+            if response == gtk.RESPONSE_YES:
+                self.datafile.delete_connection(data)
+                kill_window(None)
+            return
 
         button_separator = gtk.HSeparator()
         delete_button = gtk.Button("Delete")
@@ -216,7 +292,7 @@ class pyntsc:
 
         # layout party
         table.attach(category_label, 0, 1, 0, 1)
-        table.attach(category_combo, 1, 3, 0, 1)
+        table.attach(self.category_combo, 1, 3, 0, 1)
         table.attach(cat_add, 1, 2, 1, 2)
         table.attach(cat_edit, 2, 3, 1, 2)
         table.attach(cat_separator, 0, 3, 2, 3)
@@ -287,10 +363,33 @@ class pyntsc:
             cat_window.destroy()
 
         def save_entry(thing):
-            pass
+            new_data = {"Name": category_name_entry.get_text(),
+                        "Username": username_entry.get_text(),
+                        "Password": password_entry.get_text(),
+                        "Domain": domain_entry.get_text()}
+            if add:
+                result = self.datafile.add_category(new_data)
+            else:
+                result = self.datafile.edit_category(new_data, data)
+            if not result:
+                dialog = gtk.MessageDialog(cat_window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR, gtk.BUTTONS_OK, "AnErrErccered...")
+                dialog.set_title("ERMAHGERD!")
+                dialog.run()
+                dialog.destroy()
+            else:
+                self.treeview_refresh()
+                self.load_combo_ListStore(new_data['Name'])
+                kill_window(None)
 
         def delete_entry(thing):
-            pass
+            dialog = gtk.MessageDialog(cat_window, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_YES_NO, "Are you sure?")
+            dialog.set_title("Delete Category")
+            response = dialog.run()
+            dialog.destroy()
+            if response == gtk.RESPONSE_YES:
+                self.datafile.delete_connection(data)
+                kill_window(None)
+            self.datafile.delete_category(data['Name'])
 
         delete_button = gtk.Button("Delete")
         delete_button.connect("released", delete_entry)
@@ -351,11 +450,11 @@ class rDesktop(object):
         self.rdesktop_exe = "/usr/bin/rdesktop"
         self.host = connection['Host']
         self.port = connection['Port']
-        #self.username = connection['Username']
-        #self.password = connection['Password']
-        #self.domain = connection['Domain']
-        #self.GeoX = connection['GeoX']
-        #self.GeoY = connection['GeoY']
+        self.username = connection['Username']
+        self.password = connection['Password']
+        self.domain = connection['Domain']
+        self.GeoX = connection['GeoX']
+        self.GeoY = connection['GeoY']
         self.socket = False
         self.process = False
 
@@ -370,14 +469,31 @@ class rDesktop(object):
 
     def start(self):
         socket = self._get_socket()
-        self.process = subprocess.Popen([
-            self.rdesktop_exe,
-            "-X {0}".format(socket.get_id()),
-            "{host}:{port}".format(host=self.host, port=self.port)
-            ])
+        process_list = [self.rdesktop_exe,
+                        "-X {0}".format(socket.get_id()),
+                        "-g {0}x{1}".format(self.GeoX, self.GeoY)]
+
+        if len(self.username) > 0:
+            process_list.append("-u {0}".format(self.username))
+
+        if len(self.domain) > 0:
+            process_list.append("-d {0}".format(self.domain))
+
+        if len(self.password) > 0:
+            process_list.append("-p {0}".format(self.password))
+
+        process_list.append("{host}:{port}".format(host=self.host, port=self.port))
+
+        #self.process = subprocess.Popen([
+        #    self.rdesktop_exe,
+        #    "-X {0}".format(socket.get_id()),
+        #    "{host}:{port}".format(host=self.host, port=self.port)
+        #    ])
+        print "Calling rdesktop with list: {0}".format(process_list)
+        self.process = subprocess.Popen(process_list)
         socket.child_focus(gtk.DIR_TAB_FORWARD)
 
-    def focus(self):
+    def focus(self, tab=None):
         print "calling focus to socket"
         self.socket.set_can_focus(True);
         #self.socket.grab_focus()
@@ -414,6 +530,7 @@ class DataFile(object):
         if item['Name'] in self.connections[item['Category']]['Items'].keys():
             return False
         #self.connections[item['Category']]['Items'][item['Name']] = item['Name']
+        self.connections[item['Category']]['Items'][item['Name']] = dict()
         self.connections[item['Category']]['Items'][item['Name']]['Host'] = item['Host']
         self.connections[item['Category']]['Items'][item['Name']]['Port'] = item['Port']
         self.connections[item['Category']]['Items'][item['Name']]['GeoX'] = item['GeoX']
@@ -427,9 +544,9 @@ class DataFile(object):
 
     def edit_connection(self, item, orig_item):
         if item['Name'] in self.connections[item['Category']]['Items'].keys():
-            if item['Name'] is not orig_item['Name']:
+            if item['Name'] != orig_item['Name']:
                 return False
-            if item['Category'] is not orig_item['Category']:
+            if item['Category'] != orig_item['Category']:
                 return False
 
         self.delete_connection(orig_item)
@@ -439,9 +556,11 @@ class DataFile(object):
     def add_category(self, category):
         if category['Name'] in self.connections.keys():
             return False
+        self.connections[category['Name']] = dict()
         self.connections[category['Name']]['Username'] = category['Username']
         self.connections[category['Name']]['Password'] = category['Password']
         self.connections[category['Name']]['Domain'] = category['Domain']
+        self.connections[category['Name']]['Items'] = dict()
         self.write()
         return True
     
@@ -471,6 +590,9 @@ class DataFile(object):
                         entry = tree_model[cat]['Items'][item]
                         entry['Category'] = cat
                         entry['Name'] = item
+                        entry['Username'] = tree_model[cat]['Username']
+                        entry['Password'] = tree_model[cat]['Password']
+                        entry['Domain'] = tree_model[cat]['Domain']
                         return entry
 
     def get_category_data(self, category):
