@@ -14,6 +14,7 @@ class pyntsc:
         self.window.connect("delete_event", self.delete_event)
         self.window.connect("destroy", self.destroy)
         self.window.set_border_width(10)
+        self.window.set_icon_from_file("pyntsc.png")
         gtk.Window.set_geometry_hints(self.window, min_width=650, min_height=400, max_width=-1, max_height=-1, base_width=650, base_height=400)
 
         self.make_treeview()

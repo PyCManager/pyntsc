@@ -8,6 +8,4 @@ PYNTSC (Pint See) - Python (GTK) Network Terminal Services Client
 
 ## Roadmap
 
-* Add ability to disconnect (close tab / end rdesktop process)
-* Fix window resize on connect / tab switch
 * Set Icon
