@@ -97,20 +97,22 @@ class pyntsc:
         elif event.button == 1 and event.type == gtk.gdk._2BUTTON_PRESS:
             print "connecting to: {0}".format(name_of_connection)
             self.connection[name_of_connection] = rDesktop(self.datafile.get_connection_data(name_of_connection))
+            #self.connection[name_of_connection].set_name(name_of_connection)
             app_socket = self.connection[name_of_connection]._get_socket()
-            tab_label = gtk.Label(name_of_connection)
-            tab_label.connect('button-press-event', self.connection[name_of_connection].focus)
-            tab = self.notebook.append_page(app_socket, tab_label)
+            # Here
+            tab_object = Tab(name_of_connection, app_socket)
+            tab = self.notebook.append_page(app_socket, tab_object.header)
+            print "This is the tab: {0}".format(tab)
+            self.connection[name_of_connection].set_tab(tab)
             self.connection[name_of_connection].start()
             app_socket.show()
             self.connection[name_of_connection].focus(tab)
             self.resize_window(name_of_connection)
+            self.notebook.set_current_page(tab)
 
     def resize_window(self, name):
         new_width = self.connection[name].GeoX
         new_height = self.connection[name].GeoY
-
-        # I'm here
 
         new_width += self.hpaned.get_position()
         new_width += 30
@@ -419,8 +421,14 @@ class pyntsc:
     def make_notebook(self):
         notebook = gtk.Notebook()
         notebook.set_tab_pos(gtk.POS_TOP)
+        notebook.connect("switch-page", self.notebook_resize)
 
         return notebook
+
+    def notebook_resize(self, notebook, page, page_num):
+        for key, connection in self.connection.iteritems():
+            if self.connection[key].get_tab() == page_num:
+                self.resize_window(key)
 
     def hpane(self):
         hpaned = gtk.HPaned()
@@ -445,6 +453,26 @@ class pyntsc:
         gtk.main()
 
 
+class Tab():
+    def __init__(self, name, app_socket):
+        self.app_socket = app_socket
+        self.header = gtk.HBox()
+        self.title_label = gtk.Label(name)
+        #title_lable.connect('released', )
+        image = gtk.Image()
+        image.set_from_stock(gtk.STOCK_CLOSE, gtk.ICON_SIZE_MENU)
+        close_button = gtk.Button()
+        close_button.set_image(image)
+        close_button.set_relief(gtk.RELIEF_NONE)
+        close_button.connect('released', self.close_cb)
+        self.header.pack_start(self.title_label, expand=True, fill=True, padding=0)
+        self.header.pack_end(close_button, expand=False, fill=False, padding=0)
+        self.header.show_all()
+
+    def close_cb(self, thing):
+        self.app_socket.destroy()
+
+
 class rDesktop(object):
     def __init__(self, connection):
         self.rdesktop_exe = "/usr/bin/rdesktop"
@@ -457,6 +485,7 @@ class rDesktop(object):
         self.GeoY = connection['GeoY']
         self.socket = False
         self.process = False
+        self.tab = False
 
     def _get_socket(self):
         if not self.socket:
@@ -498,6 +527,12 @@ class rDesktop(object):
         self.socket.set_can_focus(True);
         #self.socket.grab_focus()
         self.socket.child_focus(gtk.DIR_TAB_FORWARD)
+
+    def set_tab(self, tab):
+        self.tab = tab
+
+    def get_tab(self):
+        return self.tab
 
     def __del__(self):
         self.process.terminate()
