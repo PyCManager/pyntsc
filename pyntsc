@@ -109,7 +109,7 @@ class pyntsc:
                 edit_category = gtk.MenuItem("Edit Category")
                 edit_category.connect("activate", self.cat_edit_window, name)
                 add_category = gtk.MenuItem("Add Category")
-                add_category.connect("activate", self.cat_edit_window, name)
+                add_category.connect("activate", self.cat_edit_window, None)
                 menu.append(edit_category)
                 menu.append(add_category)
                 edit_category.show()
@@ -164,9 +164,9 @@ class pyntsc:
             data['Category'] = pre_cat
             data['Host'] = ""
             data['Name'] = ""
-            data['Port'] = 3306
-            data['GeoX'] = 640
-            data['GeoY'] = 480
+            data['Port'] = 3389
+            data['GeoX'] = 1024
+            data['GeoY'] = 600
         else:
             add = False
             window_name = "Edit Connection {0}".format(name)
@@ -303,6 +303,7 @@ class pyntsc:
         edit_window.show_all()
 
     def cat_edit_window(self, thing, category):
+        print "edit window category: {0} ".format(category)
         if category is None:
             window_name = "Add Category"
             add = True
@@ -481,17 +482,17 @@ class rDesktop(object):
     def start(self):
         socket = self._get_socket()
         process_list = [self.rdesktop_exe,
-                        "-X {0}".format(socket.get_id()),
-                        "-g {0}x{1}".format(self.GeoX, self.GeoY)]
+                        "-X{0}".format(socket.get_id()),
+                        "-g{0}x{1}".format(self.GeoX, self.GeoY)]
 
         if len(self.username) > 0:
-            process_list.append("-u {0}".format(self.username))
+            process_list.append("-u{0}".format(self.username))
 
         if len(self.domain) > 0:
-            process_list.append("-d {0}".format(self.domain))
+            process_list.append("-d{0}".format(self.domain))
 
         if len(self.password) > 0:
-            process_list.append("-p {0}".format(self.password))
+            process_list.append("-p{0}".format(self.password))
 
         process_list.append("{host}:{port}".format(host=self.host, port=self.port))
 
@@ -564,6 +565,7 @@ class DataFile(object):
 
     def add_category(self, category):
         if category['Name'] in self.connections.keys():
+            print "cat exists fail: {0} in {1}".format(category['Name'], self.connections.keys())
             return False
         self.connections[category['Name']] = dict()
         self.connections[category['Name']]['Username'] = category['Username']
@@ -574,10 +576,14 @@ class DataFile(object):
         return True
     
     def edit_category(self, category, orig_cat):
+        orig_cat['Items'] = self.connections[orig_cat['Name']]['Items']
+        self.delete_category(orig_cat['Name'])
+        print "orig cat {0}".format(orig_cat)
         if not self.add_category(category):
             return False
-        self.connections[category['Name']]['Items'] = self.connections[orig_cat['Name']]['Items']
-        self.delete_category(orig_cat['Name'])
+        if 'Items' in orig_cat:
+            self.connections[category['Name']]['Items'] = orig_cat['Items']
+        self.write()
         return True
         
     def delete_category(self, name):
