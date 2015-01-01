@@ -303,7 +303,6 @@ class pyntsc:
         edit_window.show_all()
 
     def cat_edit_window(self, thing, category):
-        print "edit window category: {0} ".format(category)
         if category is None:
             window_name = "Add Category"
             add = True
@@ -565,7 +564,6 @@ class DataFile(object):
 
     def add_category(self, category):
         if category['Name'] in self.connections.keys():
-            print "cat exists fail: {0} in {1}".format(category['Name'], self.connections.keys())
             return False
         self.connections[category['Name']] = dict()
         self.connections[category['Name']]['Username'] = category['Username']
@@ -578,7 +576,6 @@ class DataFile(object):
     def edit_category(self, category, orig_cat):
         orig_cat['Items'] = self.connections[orig_cat['Name']]['Items']
         self.delete_category(orig_cat['Name'])
-        print "orig cat {0}".format(orig_cat)
         if not self.add_category(category):
             return False
         if 'Items' in orig_cat:
