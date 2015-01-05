@@ -113,23 +113,23 @@ class pyntsc:
             if self.datafile.is_category(name):
                 edit_category = gtk.MenuItem("Edit Category")
                 edit_category.connect("activate", self.cat_edit_window, name)
-                add_category = gtk.MenuItem("Add Category")
-                add_category.connect("activate", self.cat_edit_window, None)
+                add_menu_item = gtk.MenuItem("Add Item")
+                add_menu_item.connect("activate", self.edit_window, None, name)
                 menu.append(edit_category)
-                menu.append(add_category)
+                menu.append(add_menu_item)
+                add_menu_item.show()
                 edit_category.show()
-                add_category.show()
             else:
                 edit_menu_item = gtk.MenuItem("Edit Item")
                 edit_menu_item.connect("activate", self.edit_window, name)
                 menu.append(edit_menu_item)
                 edit_menu_item.show()
 
-        add_menu_item = gtk.MenuItem("Add Item")
-        add_menu_item.connect("activate", self.edit_window, None, name)
+        add_category = gtk.MenuItem("Add Category")
+        add_category.connect("activate", self.cat_edit_window, None)
 
-        menu.append(add_menu_item)
-        add_menu_item.show()
+        menu.append(add_category)
+        add_category.show()
         menu.popup(None, None, None, event.button, event.time)
         return
 
@@ -283,7 +283,7 @@ class pyntsc:
         cancel_button = gtk.Button("Cancel")
         cancel_button.connect("released", kill_window)
 
-        # layout party
+        # layout party!!
         table.attach(category_label, 0, 1, 0, 1)
         table.attach(self.category_combo, 1, 3, 0, 1)
         table.attach(cat_add, 1, 2, 1, 2)
