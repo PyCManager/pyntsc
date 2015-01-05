@@ -13,3 +13,8 @@ Pyntsc requires rdesktop to be installed. This is easily accomplished with:
 
 ## Known Issues
 * rdesktop socket focus issues (can navigate with Tab key)
+
+## Roadmap
+* Add Sub-Categories for items
+* Support opening .rdp files
+* Sort options for connections list (or just a default alphabetical sort). 
