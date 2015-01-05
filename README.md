@@ -17,4 +17,4 @@ Pyntsc requires rdesktop to be installed. This is easily accomplished with:
 ## Roadmap
 * Add Sub-Categories for items
 * Support opening .rdp files
-* Sort options for connections list (or just a default alphabetical sort). 
+* ~~Sort options for connections list (or just a default alphabetical sort)~~
